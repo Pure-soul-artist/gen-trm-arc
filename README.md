@@ -264,6 +264,11 @@ Input (ARC puzzle tokens)
 **Key insight:** The TRM backbone produces a deterministic reasoning state `z_H`. Our VAE head learns a distribution over `z_H`, enabling K independent samples → K different output grids → oracle accuracy > exact match.
 
 ---
+## Results
+
+**Comparision of Base TRM and Gen TRM**
+![Comparision Figure](gen_trm_results.png)
+
 
 ## Troubleshooting
 
