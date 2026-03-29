@@ -1,0 +1,48 @@
+============================================================
+  BASE TRM EVAL (no VAE) — test split
+============================================================
+TinyRecursiveReasoningModel_ACTV1(
+  (inner): TinyRecursiveReasoningModel_ACTV1_Inner(
+    (embed_tokens): CastedEmbedding()
+    (lm_head): CastedLinear()
+    (q_head): CastedLinear()
+    (puzzle_emb): CastedSparseEmbedding()
+    (rotary_emb): RotaryEmbedding()
+    (L_level): TinyRecursiveReasoningModel_ACTV1ReasoningModule(
+      (layers): ModuleList(
+        (0-1): 2 x TinyRecursiveReasoningModel_ACTV1Block(
+          (self_attn): Attention(
+            (qkv_proj): CastedLinear()
+            (o_proj): CastedLinear()
+          )
+          (mlp): SwiGLU(
+            (gate_up_proj): CastedLinear()
+            (down_proj): CastedLinear()
+          )
+        )
+      )
+    )
+  )
+)
+Loading checkpoint step_518071
+  Loaded 400 puzzles from test split
+  [40/400] Exact=27.5%  (25s)
+  [80/400] Exact=13.8%  (49s)
+  [120/400] Exact=9.2%  (74s)
+  [160/400] Exact=6.9%  (98s)
+  [200/400] Exact=6.0%  (123s)
+  [240/400] Exact=5.0%  (148s)
+  [280/400] Exact=4.3%  (172s)
+  [320/400] Exact=3.8%  (197s)
+  [360/400] Exact=3.6%  (222s)
+  [400/400] Exact=3.5%  (246s)
+
+============================================================
+  BASE TRM RESULTS (test)
+============================================================
+  Tasks:       400
+  Exact Match: 3.5%  (14/400)
+  (No VAE, no sampling, single deterministic prediction)
+============================================================
+
+  Saved: base_trm_test_results.json

@@ -1,0 +1,8 @@
+{
+  "base_trm_pass_at_n": 0.0575,
+  "gen_trm_pass_at_n": 0.0575,
+  "improvement": 0.0,
+  "total_puzzles": 400,
+  "avg_augmentations": 920,
+  "gen_hypotheses_per_aug": 3
+}

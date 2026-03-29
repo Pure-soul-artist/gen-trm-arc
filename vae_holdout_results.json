@@ -1,0 +1,9 @@
+{
+  "exact_match": 0.0375,
+  "oracle_accuracy": 0.0375,
+  "oracle_gap": 0.0,
+  "diversity": 0.07624863668024773,
+  "total_tasks": 400,
+  "K": 8,
+  "note": "1 held-out augmented example per original training puzzle"
+}

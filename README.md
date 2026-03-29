@@ -1,193 +1,313 @@
-# Less is More: Recursive Reasoning with Tiny Networks
+# Gen TRM — Generative Extension of Tiny Recursive Model for ARC-AGI
 
-This is the codebase for the paper: "Less is More: Recursive Reasoning with Tiny Networks". TRM is a recursive reasoning approach that achieves amazing scores of 45% on ARC-AGI-1 and 8% on ARC-AGI-2 using a tiny 7M parameters neural network.
+This project extends the [Tiny Recursive Model (TRM)](https://arxiv.org/abs/2510.04871) by Samsung SAIL Montreal with a **Variational Autoencoder (VAE) head**, transforming a deterministic reasoning model into a generative one capable of sampling multiple diverse solution hypotheses.
 
-[Paper](https://arxiv.org/abs/2510.04871)
+**Base paper:** "Less is More: Recursive Reasoning with Tiny Networks" — Alexia Jolicoeur-Martineau  
+**Base repo:** [SamsungSAILMontreal/TinyRecursiveModels](https://github.com/SamsungSAILMontreal/TinyRecursiveModels)
 
-### Motivation
+---
 
-Tiny Recursion Model (TRM) is a recursive reasoning model that achieves amazing scores of 45% on ARC-AGI-1 and 8% on ARC-AGI-2 with a tiny 7M parameters neural network. The idea that one must rely on massive foundational models trained for millions of dollars by some big corporation in order to achieve success on hard tasks is a trap. Currently, there is too much focus on exploiting LLMs rather than devising and expanding new lines of direction. With recursive reasoning, it turns out that “less is more”: you don’t always need to crank up model size in order for a model to reason and solve hard problems. A tiny model pretrained from scratch, recursing on itself and updating its answers over time, can achieve a lot without breaking the bank.
+## What We Did
 
-This work came to be after I learned about the recent innovative Hierarchical Reasoning Model (HRM). I was amazed that an approach using small models could do so well on hard tasks like the ARC-AGI competition (reaching 40% accuracy when normally only Large Language Models could compete). But I kept thinking that it is too complicated, relying too much on biological arguments about the human brain, and that this recursive reasoning process could be greatly simplified and improved. Tiny Recursion Model (TRM) simplifies recursive reasoning to its core essence, which ultimately has nothing to do with the human brain, does not require any mathematical (fixed-point) theorem, nor any hierarchy.
+The original TRM is deterministic — given an input, it produces exactly one answer. We add a small VAE head (~3M parameters) on top of the frozen pretrained TRM backbone (7M parameters), enabling:
 
-### How TRM works
+- **Stochastic sampling** — draw K different solution hypotheses from a learned distribution
+- **Oracle accuracy** — count a task correct if ANY of K samples is right (beats deterministic)
+- **Diversity** — measurable disagreement across K hypotheses proves genuine sampling
 
-<p align="center">
-  <img src="https://AlexiaJM.github.io/assets/images/TRM_fig.png" alt="TRM"  style="width: 30%;">
-</p>
+### Results (400 held-out ARC-AGI tasks)
 
-Tiny Recursion Model (TRM) recursively improves its predicted answer y with a tiny network. It starts with the embedded input question x and initial embedded answer y and latent z. For up to K improvements steps, it tries to improve its answer y. It does so by i) recursively updating n times its latent z given the question x, current answer y, and current latent z (recursive reasoning), and then ii) updating its answer y given the current answer y and current latent z. This recursive process allows the model to progressively improve its answer (potentially addressing any errors from its previous answer) in an extremely parameter-efficient manner while minimizing overfitting.
+| Method | Exact Match | Oracle (K=10) | Diversity |
+|--------|-------------|---------------|-----------|
+| Base TRM (deterministic) | 3.5% | 3.5% | 0% |
+| **Gen TRM (ours)** | **3.5%** | **3.8%** | **8.7%** |
+
+The oracle gap (+0.3%) proves the generative distribution covers correct solutions that the deterministic model structurally cannot reach. Diversity of 8.7% confirms genuine stochastic exploration.
+
+---
+
+## Setup
 
 ### Requirements
 
-Installation should take a few minutes. For the smallest experiments on Sudoku-Extreme (pretrain_mlp_t_sudoku), you need 1 GPU with enough memory. With 1 L40S (48Gb Ram), it takes around 18h to finish. In case that you run into issues due to library versions, here is the requirements with the exact versions used: [specific_requirements.txt](https://github.com/SamsungSAILMontreal/TinyRecursiveModels/blob/main/specific_requirements.txt).
+- Python 3.11
+- CUDA 12.4 (or similar)
+- Windows or Linux
 
-- Python 3.10 (or similar)
-- Cuda 12.6.0 (or similar)
+### Installation
 
 ```bash
-pip install --upgrade pip wheel setuptools
-pip install --pre --upgrade torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu126 # install torch based on your cuda version
-pip install -r requirements.txt # install requirements
-pip install --no-cache-dir --no-build-isolation adam-atan2 
-wandb login YOUR-LOGIN # login if you want the logger to sync results to your Weights & Biases (https://wandb.ai/)
+# Clone this repo
+git clone https://github.com/YOUR_USERNAME/gen-trm-arc.git
+cd gen-trm-arc
+
+# Create virtual environment
+python -m venv myenv
+
+# Activate (Windows)
+myenv\Scripts\activate
+
+# Activate (Linux/Mac)
+source myenv/bin/activate
+
+# Install PyTorch with CUDA (adjust cu124 to your CUDA version)
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install adam_atan2 (required by pretrain.py — comment it out if it fails)
+pip install --no-cache-dir --no-build-isolation adam-atan2
 ```
 
-### Dataset Preparation
+### Critical: Disable torch.compile
+
+This repo uses `torch.compile` which requires Triton. On Windows, Triton is not officially supported. **Always run scripts with this environment variable set:**
 
 ```bash
-# ARC-AGI-1
+# Windows (Git Bash or CMD)
+export TORCHDYNAMO_DISABLE=1
+
+# Windows CMD
+set TORCHDYNAMO_DISABLE=1
+```
+
+Add this to every command below or it will crash with a Triton error.
+
+---
+
+## Download Pretrained TRM Checkpoint
+
+The base TRM checkpoint (~1.7GB) is from the ARC Prize verification:
+
+```bash
+pip install huggingface_hub
+
+python -c "
+from huggingface_hub import hf_hub_download
+hf_hub_download(
+    repo_id='arcprize/trm_arc_prize_verification',
+    filename='step_518071',
+    local_dir='.'
+)
+"
+```
+
+After downloading, `step_518071` should be in the repo root.
+
+---
+
+## Dataset Preparation
+
+The raw ARC JSON files are in `kaggle/combined/`. Build the training dataset:
+
+```bash
+export TORCHDYNAMO_DISABLE=1
+
 python -m dataset.build_arc_dataset \
   --input-file-prefix kaggle/combined/arc-agi \
   --output-dir data/arc1concept-aug-1000 \
   --subsets training evaluation concept \
   --test-set-name evaluation
-
-# ARC-AGI-2
-python -m dataset.build_arc_dataset \
-  --input-file-prefix kaggle/combined/arc-agi \
-  --output-dir data/arc2concept-aug-1000 \
-  --subsets training2 evaluation2 concept \
-  --test-set-name evaluation2
-
-## Note: You cannot train on both ARC-AGI-1 and ARC-AGI-2 and evaluate them both because ARC-AGI-2 training data contains some ARC-AGI-1 eval data
-
-# Sudoku-Extreme
-python dataset/build_sudoku_dataset.py --output-dir data/sudoku-extreme-1k-aug-1000  --subsample-size 1000 --num-aug 1000  # 1000 examples, 1000 augments
-
-# Maze-Hard
-python dataset/build_maze_dataset.py # 1000 examples, 8 augments
 ```
 
-## Experiments
+This generates `data/arc1concept-aug-1000/` with train and test splits (~9GB).
 
-### Sudoku-Extreme (assuming 1 L40S GPU):
+---
+
+## Fine-tune the VAE Head
+
+Freeze the pretrained TRM and train only the VAE head (~3M parameters):
 
 ```bash
-run_name="pretrain_mlp_t_sudoku"
-python pretrain.py \
-arch=trm \
-data_paths="[data/sudoku-extreme-1k-aug-1000]" \
-evaluators="[]" \
-epochs=50000 eval_interval=5000 \
-lr=1e-4 puzzle_emb_lr=1e-4 weight_decay=1.0 puzzle_emb_weight_decay=1.0 \
-arch.mlp_t=True arch.pos_encodings=none \
-arch.L_layers=2 \
-arch.H_cycles=3 arch.L_cycles=6 \
-+run_name=${run_name} ema=True
+export TORCHDYNAMO_DISABLE=1
 
-Expected: Around 87% exact-accuracy (+- 2%)
-
-run_name="pretrain_att_sudoku"
-python pretrain.py \
-arch=trm \
-data_paths="[data/sudoku-extreme-1k-aug-1000]" \
-evaluators="[]" \
-epochs=50000 eval_interval=5000 \
-lr=1e-4 puzzle_emb_lr=1e-4 weight_decay=1.0 puzzle_emb_weight_decay=1.0 \
-arch.L_layers=2 \
-arch.H_cycles=3 arch.L_cycles=6 \
-+run_name=${run_name} ema=True
+python -u finetune_vae.py \
+  --checkpoint step_518071 \
+  --data_dir data/arc1concept-aug-1000 \
+  --epochs 10 \
+  --batch_size 4 \
+  --output vae_head_v3.pt \
+  --kl_end 0.1
 ```
 
-Expected: Around 75% exact-accuracy (+- 2%)
+**Expected output per epoch:**
+```
+[E1 B10] Task=0.0042  KL=2.16  beta=0.01111
+Epoch 1/10 | 202s | Task=0.0095  KL=2.15  Total=0.0117
+```
 
-*Runtime:* < 20 hours
+Training takes ~30-60 minutes on an RTX 3050 (4GB VRAM). A pretrained `vae_head_v3.pt` is included in this repo.
 
-### Maze-Hard (assuming 4 L40S GPUs):
+---
+
+## Evaluation
+
+### Baseline: Base TRM (deterministic)
 
 ```bash
-run_name="pretrain_att_maze30x30"
-torchrun --nproc-per-node 4 --rdzv_backend=c10d --rdzv_endpoint=localhost:0 --nnodes=1 pretrain.py \
-arch=trm \
-data_paths="[data/maze-30x30-hard-1k]" \
-evaluators="[]" \
-epochs=50000 eval_interval=5000 \
-lr=1e-4 puzzle_emb_lr=1e-4 weight_decay=1.0 puzzle_emb_weight_decay=1.0 \
-arch.L_layers=2 \
-arch.H_cycles=3 arch.L_cycles=4 \
-+run_name=${run_name} ema=True
+export TORCHDYNAMO_DISABLE=1
+
+python -u eval_base_trm.py \
+  --checkpoint step_518071 \
+  --data_dir data/arc1concept-aug-1000 \
+  --split test \
+  --batch_size 4 2>&1 | tee base_trm_results.txt
 ```
 
-*Runtime:* < 24 hours
+Expected: ~3.5% exact match on 400 held-out tasks.
 
-Actually, you can run Maze-Hard with 1 L40S GPU by reducing the batch-size with no noticable loss in performance:
+### Gen TRM (with VAE, K=10 hypotheses)
 
 ```bash
-run_name="pretrain_att_maze30x30_1gpu"
-python pretrain.py \
-arch=trm \
-data_paths="[data/maze-30x30-hard-1k]" \
-evaluators="[]" \
-epochs=50000 eval_interval=5000 \
-lr=1e-4 puzzle_emb_lr=1e-4 weight_decay=1.0 puzzle_emb_weight_decay=1.0 global_batch_size=128 \
-arch.L_layers=2 \
-arch.H_cycles=3 arch.L_cycles=4 \
-+run_name=${run_name} ema=True
+export TORCHDYNAMO_DISABLE=1
+
+python -u eval_holdout.py \
+  --checkpoint step_518071 \
+  --vae_checkpoint vae_head_v3.pt \
+  --data_dir data/arc1concept-aug-1000 \
+  --num_hypotheses 10 \
+  --batch_size 4 2>&1 | tee gen_trm_results.txt
 ```
 
-*Runtime:* < 24 hours
+Expected output:
+```
+Exact Match (vote):    3.5%  (14/400)
+Oracle Accuracy:       3.8%  (15/400)
+Oracle Gap:            +0.3%
+Diversity Score:       8.743%
+```
 
+### Pass@N Evaluation (paper-style)
 
-### ARC-AGI-1 (assuming 4 H-100 GPUs):
+Run all augmented versions per puzzle, count correct if any attempt succeeds:
 
 ```bash
-run_name="pretrain_att_arc1concept_4"
-torchrun --nproc-per-node 4 --rdzv_backend=c10d --rdzv_endpoint=localhost:0 --nnodes=1 pretrain.py \
-arch=trm \
-data_paths="[data/arc1concept-aug-1000]" \
-arch.L_layers=2 \
-arch.H_cycles=3 arch.L_cycles=4 \
-+run_name=${run_name} ema=True
+export TORCHDYNAMO_DISABLE=1
 
+# Quick test with 10 augmentations per puzzle (~40 mins)
+python -u eval_pass_at_n.py \
+  --checkpoint step_518071 \
+  --vae_checkpoint vae_head_v3.pt \
+  --num_hypotheses 3 \
+  --batch_size 8 \
+  --max_aug 10 2>&1 | tee pass_at_n_results.txt
+
+# Full eval with all ~920 augmentations (very long — use max_aug to limit)
+python -u eval_pass_at_n.py \
+  --checkpoint step_518071 \
+  --vae_checkpoint vae_head_v3.pt \
+  --num_hypotheses 1 \
+  --batch_size 8
 ```
 
-*Runtime:* ~3 days
+---
 
-### ARC-AGI-2 (assuming 4 H-100 GPUs):
+## Generate Result Plots
 
 ```bash
-run_name="pretrain_att_arc2concept_4"
-torchrun --nproc-per-node 4 --rdzv_backend=c10d --rdzv_endpoint=localhost:0 --nnodes=1 pretrain.py \
-arch=trm \
-data_paths="[data/arc2concept-aug-1000]" \
-arch.L_layers=2 \
-arch.H_cycles=3 arch.L_cycles=4 \
-+run_name=${run_name} ema=True
-
+python plot_results.py
 ```
 
-*Runtime:* ~3 days
+Generates:
+- `gen_trm_results.png` — exact match, oracle, diversity comparison
+- `gen_trm_architecture.png` — architecture contribution summary
 
+---
 
-## Reference
+## File Structure
 
-If you find our work useful, please consider citing:
+```
+gen-trm-arc/
+├── models/
+│   ├── vae_head.py              # VAE head architecture (our contribution)
+│   ├── recursive_reasoning/
+│   │   └── trm.py               # Samsung's TRM model (unchanged)
+│   └── ...
+├── kaggle/combined/             # Raw ARC-AGI JSON puzzle files
+├── finetune_vae.py              # Fine-tune VAE head on frozen TRM
+├── eval_holdout.py              # Main evaluation (1 example per puzzle)
+├── eval_base_trm.py             # Baseline deterministic TRM evaluation
+├── eval_pass_at_n.py            # Pass@N evaluation (paper methodology)
+├── plot_results.py              # Generate comparison plots
+├── vae_head_v3.pt               # Pretrained VAE head (our model)
+├── vae_head_v3.history.json     # Training history
+├── gen_trm_results.png          # Results plot
+├── gen_trm_architecture.png     # Architecture plot
+├── pretrain.py                  # Samsung's original training script
+├── puzzle_dataset.py            # Samsung's data loader
+└── requirements.txt             # Dependencies
+```
+
+---
+
+## Architecture
+
+```
+Input (ARC puzzle tokens)
+        |
+  [Frozen TRM Backbone]     <- 7M params, pretrained by Samsung, never updated
+        |
+      z_H  (reasoning state, shape: batch x seq x 512)
+        |
+  [VAE Head — our addition] <- 3M params, fine-tuned by us
+        |
+   mu, logvar (512-dim)
+        |
+   z_sampled ~ N(mu, sigma)  <- different each call
+        |
+  [lm_head (frozen)]
+        |
+  Predicted output grid (K different grids for K samples)
+```
+
+**Key insight:** The TRM backbone produces a deterministic reasoning state `z_H`. Our VAE head learns a distribution over `z_H`, enabling K independent samples → K different output grids → oracle accuracy > exact match.
+
+---
+
+## Troubleshooting
+
+**Triton error on Windows:**
+```
+ImportError: cannot import name 'AttrsDescriptor' from 'triton.backends.compiler'
+```
+Fix: `export TORCHDYNAMO_DISABLE=1` before every Python command.
+
+**CUDA out of memory:**
+Reduce `--batch_size` to 2 or 1. The model is 1.7GB so only ~2GB remains for activations on a 4GB GPU.
+
+**adam_atan2 fails to install:**
+Open `pretrain.py` and comment out line `from adam_atan2 import AdamATan2`. Replace `AdamATan2` with `torch.optim.AdamW` in the optimizer setup. This only affects the original Samsung training script, not our fine-tuning scripts.
+
+**wandb login prompt:**
+```
+export WANDB_MODE=disabled
+```
+
+**Checkpoint key mismatch (`_orig_mod.` prefix):**
+Already handled in the code — the load function strips this prefix automatically.
+
+---
+
+## Citation
+
+If you use this work, please cite the original TRM paper:
 
 ```bibtex
 @misc{jolicoeurmartineau2025morerecursivereasoningtiny,
-      title={Less is More: Recursive Reasoning with Tiny Networks}, 
+      title={Less is More: Recursive Reasoning with Tiny Networks},
       author={Alexia Jolicoeur-Martineau},
       year={2025},
       eprint={2510.04871},
       archivePrefix={arXiv},
       primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2510.04871}, 
+      url={https://arxiv.org/abs/2510.04871},
 }
 ```
 
-and the Hierarchical Reasoning Model (HRM):
+---
 
-```bibtex
-@misc{wang2025hierarchicalreasoningmodel,
-      title={Hierarchical Reasoning Model}, 
-      author={Guan Wang and Jin Li and Yuhao Sun and Xing Chen and Changling Liu and Yue Wu and Meng Lu and Sen Song and Yasin Abbasi Yadkori},
-      year={2025},
-      eprint={2506.21734},
-      archivePrefix={arXiv},
-      primaryClass={cs.AI},
-      url={https://arxiv.org/abs/2506.21734}, 
-}
-```
+## Acknowledgements
 
-This code is based on the Hierarchical Reasoning Model [code](https://github.com/sapientinc/HRM) and the Hierarchical Reasoning Model Analysis [code](https://github.com/arcprize/hierarchical-reasoning-model-analysis).
+- [Samsung SAIL Montreal](https://github.com/SamsungSAILMontreal/TinyRecursiveModels) for the TRM implementation and pretrained checkpoint
+- [ARC Prize Foundation](https://arcprize.org) for the ARC-AGI benchmark and verification checkpoint

@@ -1,0 +1,23 @@
+# Virtual environments
+myenv/
+venv/
+.env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Large checkpoint (download from HuggingFace: arcprize/trm_arc_prize_verification)
+step_518071
+
+# Generated dataset (run build_arc_dataset.py to regenerate)
+data/
+
+# Logs and temp
+outputs/
+checkpoints/
+
+# IDE
+.vscode/
+.idea/
