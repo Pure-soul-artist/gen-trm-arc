@@ -1,4 +1,19 @@
-MIT License
+PROJECT LICENSE: DUAL-MODAL
+
+PART 1: PROPRIETARY MODIFICATIONS (RESTRICTED)
+Copyright (c) 2026 Akhil Kumar Kondapuram, Jishnu Ravella, P. Harini, Jyoshita Donepudi. ALL RIGHTS RESERVED.
+
+The modifications in this repository, specifically the VAE head architecture, VAE head model weights/logic, are the exclusive intellectual property of the authors.
+
+NO GRANT OF LICENSE: No license is granted for the redistribution, sublicensing, or public display of these specific modifications.
+
+ACADEMIC RESTRICTION: This work is strictly prohibited from being included in any academic paper, journal submission (e.g., IEEE, ACM), or conference proceeding by any party other than the authors.
+
+ENFORCEMENT: Any unauthorized use constitutes both copyright infringement and academic plagiarism. Authors reserve the right to pursue DMCA takedowns and formal academic misconduct reports.
+
+CITATION: While the code is proprietary, you may cite this repository as a reference for academic discussion.
+
+PART 2: BASE SOFTWARE (MIT LICENSE)
 
 Copyright (c) 2025. Samsung Electronics Co., Ltd. All Rights Reserved.
 

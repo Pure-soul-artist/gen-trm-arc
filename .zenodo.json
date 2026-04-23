@@ -1,0 +1,32 @@
+{
+  "title": "Gen TRM — Generative Extension of Tiny Recursive Model for ARC-AGI",
+  "creators": [
+    {
+      "name": "Kondapuram, Akhil Kumar",
+      "affiliation": "Lead Researcher"
+    },
+    {
+      "name": "Ravella, Jishnu",
+      "affiliation": "Researcher"
+    },
+    {
+      "name": "Donepudi, Jyoshita",
+      "affiliation": "Researcher"
+    },
+    {
+      "name": "P., Harini",
+      "affiliation": "Researcher"
+    }
+  ],
+  "description": "A generative extension of the Tiny Recursive Model (TRM) architecture specifically optimized for ARC-AGI tasks. This repository contains proprietary VAE head architecture modifications and integrated digital signatures for ownership verification. Built on the 2025 Samsung Electronics TRM base.",
+  "access_right": "open",
+  "license": "other-at",
+  "keywords": [
+    "ARC-AGI",
+    "Tiny Recursive Models",
+    "VAE",
+    "Generative Models",
+    "Deep Learning"
+  ],
+  "notes": "Proprietary modifications are Copyright (c) 2026 Akhil Kumar Kondapuram & Team. Base architecture is MIT Licensed by Samsung Electronics."
+}

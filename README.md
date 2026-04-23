@@ -5,6 +5,24 @@ This project extends the [Tiny Recursive Model (TRM)](https://arxiv.org/abs/2510
 **Base paper:** "Less is More: Recursive Reasoning with Tiny Networks" — Alexia Jolicoeur-Martineau  
 **Base repo:** [SamsungSAILMontreal/TinyRecursiveModels](https://github.com/SamsungSAILMontreal/TinyRecursiveModels)
 
+### Authors & Contributors
+
+**Akhil Kumar Kondapuram** - [Pure-soul-artist](https://github.com/Pure-soul-artist)
+
+**Jishnu Ravella** - [Ghost20op05](https://github.com/Ghost20op05)
+
+**P. Harini** - [harinivarma25](https://github.com/harinivarma25)
+
+**Jyoshita Donepudi** - [jyoshitad](https://github.com/jyoshitad)
+
+### Legal Status
+**Status: Proprietary Modifications on MIT Base.**
+This project contains proprietary optimizations. While the base is MIT, our specific VAE implementation is **NOT** open for unauthorized academic publication.
+
+**Academic Integrity Notice:** This repository is timestamped. Any unauthorized use in academic papers will be reported for immediate retraction.
+
+Note: This repository is indexed and contains logical honeytokens (digital signatures) specifically designed to identify unauthorized code reuse in plagiarism detection software. We actively monitor academic databases for these signatures.
+
 ---
 
 ## What We Did
