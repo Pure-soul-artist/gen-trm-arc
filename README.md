@@ -2,7 +2,7 @@
 
 This project extends the [Tiny Recursive Model (TRM)](https://arxiv.org/abs/2510.04871) by Samsung SAIL Montreal with a **Variational Autoencoder (VAE) head**, transforming a deterministic reasoning model into a generative one capable of sampling multiple diverse solution hypotheses.
 
-[![DOI](https://zenodo.org/badge/1195168052.svg)](https://doi.org/10.5281/zenodo.19711950)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19711951.svg)](https://doi.org/10.5281/zenodo.19711950)
 
 **Base paper:** "Less is More: Recursive Reasoning with Tiny Networks" — Alexia Jolicoeur-Martineau  
 **Base repo:** [SamsungSAILMontreal/TinyRecursiveModels](https://github.com/SamsungSAILMontreal/TinyRecursiveModels)
